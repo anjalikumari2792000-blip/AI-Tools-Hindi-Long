@@ -1,4 +1,4 @@
-import os, requests, json, subprocess, socket
+import os, requests, json, subprocess, socket, gc
 import moviepy.editor as mpe
 import urllib3.util.connection as urllib3_cn
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ColorClip
@@ -23,14 +23,14 @@ subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text
 voiceover = AudioFileClip("voiceover.mp3")
 
 total_chars = sum(len(s['text']) for s in scenes_data)
-video_clips = []
+rendered_files = [] # CHANGED: We now store filenames instead of heavy clip objects
 audio_clips = [voiceover]
 headers = {"Authorization": pexels_key}
 current_time = 0.0
 
 try:
     whoosh_sfx = AudioFileClip("whoosh.mp3").volumex(0.25)
-    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)       
+    pop_sfx = AudioFileClip("pop.mp3").volumex(0.15)        
 except:
     whoosh_sfx = pop_sfx = None
 
@@ -75,8 +75,21 @@ for i, scene in enumerate(scenes_data):
             word_clips.extend([bg_txt, main_txt])
         
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
-        video_clips.append(final_scene)
         
+        # --- MEMORY FIX START ---
+        # Render scene immediately to disk without audio (audio is added later)
+        scene_filename = f"scene_rendered_{i}.mp4"
+        final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="ultrafast", audio=False, logger=None)
+        rendered_files.append(scene_filename)
+        
+        # Force flush RAM to prevent Exit 143 OOM crash
+        final_scene.close()
+        clip.close()
+        del final_scene, clip, zoomed_clip, word_clips
+        gc.collect()
+        # --- MEMORY FIX END ---
+        
+        # Audio compilation runs in-memory (very lightweight)
         if whoosh_sfx: audio_clips.append(whoosh_sfx.set_start(current_time))
         if pop_sfx: audio_clips.append(pop_sfx.set_start(current_time + 0.1))
                 
@@ -85,7 +98,18 @@ for i, scene in enumerate(scenes_data):
     except Exception as e:
         print(f"Error on scene {i}: {e}")
 
-final_video = concatenate_videoclips(video_clips, method="compose")
+# --- DISK CONCATENATION FIX START ---
+# Use FFmpeg to instantly stitch the files together without using RAM
+print("Merging scenes without RAM...")
+with open("concat_list.txt", "w") as f:
+    for file in rendered_files:
+        f.write(f"file '{file}'\n")
+
+subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'concat_list.txt', '-c', 'copy', 'merged_scenes.mp4'])
+
+# Load the single lightweight unified file back into MoviePy
+final_video = VideoFileClip("merged_scenes.mp4")
+# --- DISK CONCATENATION FIX END ---
 
 final_duration = final_video.duration
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
