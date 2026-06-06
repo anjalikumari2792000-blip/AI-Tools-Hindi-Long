@@ -1,11 +1,9 @@
 import os, requests, json, subprocess, socket, gc
 import moviepy.editor as mpe
 import urllib3.util.connection as urllib3_cn
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, concatenate_videoclips, vfx, afx, ColorClip
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, ColorClip, afx
 
-# 🛡️ HACKER TRICK: Force IPv4 to bypass Hostinger "Network is unreachable" block
+# 🛡️ Force IPv4 to bypass Hostinger block
 def allowed_gai_family():
     return socket.AF_INET
 urllib3_cn.allowed_gai_family = allowed_gai_family
@@ -15,10 +13,11 @@ HINDI_FONT_FILE = "Hindi.ttf"
 # --- VARIABLES DEFINED HERE ---
 full_text = os.environ.get('FULL_TEXT', 'Ek baar ki baat hai.')
 chat_id = os.environ.get('CHAT_ID')
-webhook_url = os.environ.get('WEBHOOK_URL')
 pexels_key = os.environ.get('PEXELS_API_KEY')
 scenes_data = json.loads(os.environ.get('SCENES_DATA', '[]'))
-resume_url = os.environ.get('RESUME_URL')
+title = os.environ.get('TITLE', 'Amazing AI Tools')
+description = os.environ.get('DESCRIPTION', 'Tech and AI tools explanation.')
+thumbnail_prompt = os.environ.get('THUMBNAIL_PROMPT', 'Cinematic beautiful thumbnail')
 
 print(f"Total Scenes to render: {len(scenes_data)}")
 
@@ -26,7 +25,7 @@ subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text
 voiceover = AudioFileClip("voiceover.mp3")
 
 total_chars = sum(len(s['text']) for s in scenes_data)
-rendered_files = [] # CHANGED: We now store filenames instead of heavy clip objects
+rendered_files = [] 
 audio_clips = [voiceover]
 headers = {"Authorization": pexels_key}
 current_time = 0.0
@@ -37,7 +36,7 @@ try:
 except:
     whoosh_sfx = pop_sfx = None
 
-viral_colors = ['#00E5FF', '#FFFFFF', '#39FF14', '#FFEA00'] # Tech aesthetics
+viral_colors = ['#00E5FF', '#FFFFFF', '#39FF14', '#FFEA00']
 TARGET_W, TARGET_H = 1920, 1080
 
 for i, scene in enumerate(scenes_data):
@@ -160,41 +159,16 @@ if not video_link.startswith("http"):
 
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 
-payload = {
-    "chat_id": chat_id, 
-    "message": "👑 Bhai! 100M+ Views Long Video Ready! 🔥", 
-    "youtube_url": video_link
-}
+# 🌟 TELEGRAM BRIDGE - WITH PIPE (|) SEPARATOR FOR SAFETY
+BOT_TOKEN = "8687740956:AAFwnDe9pNXdHtmAjlLZix3ebQxslTytUwY" 
 
-# 🛡️ HACKER TRICK: Chrome Browser Fake Header to bypass Hostinger WAF
-safe_headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36',
-    'Accept': 'application/json'
-}
+# Pipe separator ensures multi-line descriptions don't break the n8n logic
+message_text = f"READY_TO_UPLOAD|{video_link}|{title}|{thumbnail_prompt}|{description}"
 
-# --- N8N RESUME LOGIC WITH ROBUST RETRY (NO THIRD-PARTY RELAY) ---
-if resume_url:
-    print(f"Resuming n8n workflow at: {resume_url}")
-    
-    # Session aur Retry logic set up karna
-    session = requests.Session()
-    retry_strategy = Retry(
-        total=5,
-        status_forcelist=[429, 500, 502, 503, 504],
-        allowed_methods=["POST"],
-        backoff_factor=2
-    )
-    adapter = HTTPAdapter(max_retries=retry_strategy)
-    session.mount('https://', adapter)
-    session.mount('http://', adapter)
-
-    try:
-        # verify=False add kiya gaya hai SSL errors ignore karne ke liye, timeout 60 seconds hai
-        response = session.post(resume_url, json={"body": payload}, headers=safe_headers, timeout=60, verify=False)
-        print(f"n8n Resume Response: {response.status_code} - {response.text}")
-    except requests.exceptions.RetryError as e:
-        print(f"CRITICAL ERROR: 5 retries ke baad bhi Hostinger VPS ne connection accept nahi kiya. Firewall IP block kar raha hai. Error: {e}")
-    except Exception as e:
-        print(f"Warning: Failed to resume n8n. Error: {e}")
-else:
-    print("No RESUME_URL provided by n8n.")
+try:
+    telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
+    payload = {"chat_id": chat_id, "text": message_text}
+    response = requests.post(telegram_url, json=payload)
+    print(f"✅ Webhook bypassed! Sent video details directly to Telegram! Status: {response.status_code}")
+except Exception as e:
+    print(f"❌ Failed to send Telegram alert: {e}")
