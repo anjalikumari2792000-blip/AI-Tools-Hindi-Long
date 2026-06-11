@@ -84,8 +84,8 @@ for i, scene in enumerate(scenes_data):
             word_weights = []
             for w in words:
                 wt = len(w)
-                if w.endswith(','): wt += 4 # Comma pause map
-                elif w[-1] in '.?!।': wt += 8 # Full stop pause map
+                if w.endswith(','): wt += 4 
+                elif w[-1] in '.?!।': wt += 8 
                 word_weights.append(wt)
             
             total_weight = sum(word_weights) if sum(word_weights) > 0 else 1
@@ -96,7 +96,6 @@ for i, scene in enumerate(scenes_data):
                 is_danger = any(kw in word_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'tool', 'ai'])
                 is_highlight = not is_danger and len(word) > 4
                 
-                # Assign exact duration based on text length + pauses
                 duration_per_word = (word_weights[w_i] / total_weight) * scene_duration
 
                 current_color = '#FF003C' if is_danger else ('#000000' if is_highlight else '#FFFFFF')
@@ -120,7 +119,6 @@ for i, scene in enumerate(scenes_data):
                 
                 current_time_pos += duration_per_word
 
-        # 45% Overlay set for perfect visibility
         dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.45).set_position(('center', 'center')).set_duration(scene_duration)
 
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
@@ -158,7 +156,13 @@ final_duration = final_video.duration
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
 progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (t / max(final_duration, 1))), 'bottom'))
 progress_bar = progress_bar.set_duration(final_duration)
-final_video = CompositeVideoClip([final_video, progress_bar])
+
+# 🔥 AIToolKitHub Watermark Implementation 🔥
+watermark = TextClip("AIToolKitHub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=2)
+# Opacity 0.5 (semi-transparent) and positioned perfectly in the bottom-right corner
+watermark = watermark.set_opacity(0.5).set_position((0.78, 0.88), relative=True).set_duration(final_duration)
+
+final_video = CompositeVideoClip([final_video, progress_bar, watermark])
 
 try:
     bgm = AudioFileClip("bgm.mp3").volumex(0.10)
