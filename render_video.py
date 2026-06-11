@@ -1,4 +1,4 @@
-import os, requests, json, subprocess, socket, gc
+import os, requests, json, subprocess, socket, gc, math, random
 import moviepy.editor as mpe
 import urllib3.util.connection as urllib3_cn
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, ColorClip, afx
@@ -60,22 +60,69 @@ for i, scene in enumerate(scenes_data):
         clip = clip.crop(x_center=clip.w/2, y_center=clip.h/2, width=TARGET_W, height=TARGET_H)
         
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
-        dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.35).set_position(('center', 'center')).set_duration(scene_duration)
         
-        words = text_line.split(' ')
-        chunk_size = 3
-        chunks = [' '.join(words[j:j + chunk_size]) for j in range(0, len(words), chunk_size)]
+        # 🔥 ADVANCED KINETIC TEXT ENGINE (Perfect Sync & Animations) 🔥
+        def advanced_punch_anim(t):
+            if t < 0.06: return 1.6 - 10.0 * t  
+            elif t < 0.15: return 1.0 + 1.2 * (t - 0.06) 
+            return 1.0
+
+        def get_kinetic_pos(base_y, is_shaking, word_idx):
+            def pos(t):
+                idle_y = 7 * math.sin(t * 8 + word_idx)
+                idle_x = 4 * math.cos(t * 6 + word_idx)
+                if is_shaking and t > 0.06:
+                    return (TARGET_W/2 + 5 * math.sin(t * 75) + idle_x, base_y + 5 * math.cos(t * 85) + idle_y)
+                return (TARGET_W/2 + idle_x, base_y + idle_y)
+            return pos
+
+        words = text_line.split()
         word_clips = []
-        duration_per_chunk = scene_duration / len(chunks)
-        
-        for w_i, chunk in enumerate(chunks):
-            current_color = viral_colors[w_i % len(viral_colors)]
-            bg_txt = TextClip(chunk, fontsize=100, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=15, method='caption', size=(1600, None))
-            bg_txt = bg_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
-            main_txt = TextClip(chunk, fontsize=100, color=current_color, font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3, method='caption', size=(1600, None))
-            main_txt = main_txt.set_position(('center', 'center')).set_duration(duration_per_chunk).set_start(w_i * duration_per_chunk)
-            word_clips.extend([bg_txt, main_txt])
-        
+
+        if words:
+            # 🚀 SMART SUBTITLE SYNCHRONIZATION 🚀
+            word_weights = []
+            for w in words:
+                wt = len(w)
+                if w.endswith(','): wt += 4 # Comma pause map
+                elif w[-1] in '.?!।': wt += 8 # Full stop pause map
+                word_weights.append(wt)
+            
+            total_weight = sum(word_weights) if sum(word_weights) > 0 else 1
+            current_time_pos = 0.0
+
+            for w_i, word in enumerate(words):
+                word_lower = word.lower()
+                is_danger = any(kw in word_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'tool', 'ai'])
+                is_highlight = not is_danger and len(word) > 4
+                
+                # Assign exact duration based on text length + pauses
+                duration_per_word = (word_weights[w_i] / total_weight) * scene_duration
+
+                current_color = '#FF003C' if is_danger else ('#000000' if is_highlight else '#FFFFFF')
+                bg_color = 'transparent' if is_danger else (random.choice(['#FFD400', '#39FF14', '#00FFFF']) if is_highlight else 'transparent')
+                base_size = 155 if is_danger else (140 if is_highlight else 95)
+
+                try:
+                    text_y_pos = TARGET_H * 0.75 
+                    position_filter = get_kinetic_pos(text_y_pos, is_danger, w_i)
+
+                    if bg_color == 'transparent':
+                        shadow_txt = TextClip(word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(get_kinetic_pos(text_y_pos + 15, is_danger, w_i)).set_duration(duration_per_word).set_start(current_time_pos)
+                        bg_txt = TextClip(word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=16, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        inner_border_txt = TextClip(word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='white', stroke_width=4, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        main_txt = TextClip(word, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        word_clips.extend([shadow_txt, bg_txt, inner_border_txt, main_txt])
+                    else:
+                        main_txt = TextClip(word, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE, method='caption', size=(None, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        word_clips.append(main_txt)
+                except: pass
+                
+                current_time_pos += duration_per_word
+
+        # 45% Overlay set for perfect visibility
+        dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.45).set_position(('center', 'center')).set_duration(scene_duration)
+
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
         
         # --- MEMORY FIX START ---
@@ -85,7 +132,7 @@ for i, scene in enumerate(scenes_data):
         
         final_scene.close()
         clip.close()
-        del final_scene, clip, zoomed_clip, word_clips
+        del final_scene, clip, zoomed_clip, word_clips, dark_overlay
         gc.collect()
         # --- MEMORY FIX END ---
         
