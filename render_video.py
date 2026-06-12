@@ -182,35 +182,38 @@ final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
 print("Rendering Final HIGH QUALITY LONG Video...")
-# 📌 5000k Bitrate retained as requested
+# 📌 5000k Bitrate
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="5000k", preset="fast")
 
-print("Starting Pixeldrain Upload System (Up to 5GB Capacity)...")
+# --- NEW UPLOAD SYSTEM VIA TRANSFER.SH ---
+print("Starting Upload System via Transfer.sh (10GB limit, GitHub IP safe)...")
 video_link = "Upload Failed"
 
-# Layer 1: Pixeldrain API (Extremely reliable for HD/Heavy files)
-if video_link == "Upload Failed":
-    try:
-        print("Trying Pixeldrain API...")
-        with open('final_video.mp4', 'rb') as f:
-            res = requests.post("https://pixeldrain.com/api/file", files={'file': f}, timeout=1200)
-        
-        if res.status_code in [200, 201]:
-            data = res.json()
-            if data.get("success"):
-                # Yeh direct download link n8n HTTP Request node ke liye perfect hai
-                video_link = f"https://pixeldrain.com/api/file/{data['id']}"
-    except Exception as e:
-        print(f"Pixeldrain upload failed: {e}")
+try:
+    print("Uploading to transfer.sh...")
+    with open('final_video.mp4', 'rb') as f:
+        # Time out badha diya gaya hai taaki heavy file aaram se chali jaye
+        res = requests.put("https://transfer.sh/final_video.mp4", data=f, timeout=1800)
+    
+    if res.text.startswith("http"):
+        raw_link = res.text.strip()
+        # n8n direct download fix: converting transfer.sh/xxxx to transfer.sh/get/xxxx
+        if "transfer.sh" in raw_link and "/get/" not in raw_link:
+            raw_link = raw_link.replace("transfer.sh/", "transfer.sh/get/")
+        video_link = raw_link
+        print(f"Upload Successful! Direct Link: {video_link}")
+except Exception as e:
+    print(f"Transfer.sh failed: {e}")
 
-# Layer 2: transfer.sh (Safety Fallback up to 10GB)
+# Backup in case Transfer.sh server is temporarily offline
 if video_link == "Upload Failed":
     try:
-        print("Trying transfer.sh API (Fallback)...")
-        with open('final_video.mp4', 'rb') as f:
-            res = requests.put("https://transfer.sh/final_video.mp4", data=f, timeout=1200)
-        if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"transfer.sh failed: {e}")
+        print("Trying file.io as backup (2GB limit)...")
+        res = requests.post("https://file.io", files={'file': open('final_video.mp4', 'rb')}, timeout=1800)
+        if res.status_code == 200:
+            video_link = res.json()['link']
+    except Exception as e:
+        print(f"file.io failed: {e}")
 
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 
