@@ -185,31 +185,28 @@ print("Rendering Final HIGH QUALITY LONG Video...")
 # 📌 5000k Bitrate retained as requested
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="5000k", preset="fast")
 
-print("Starting Heavy-File Compatible Upload System (For 200MB+ Files)...")
+print("Starting Pixeldrain Upload System (Up to 5GB Capacity)...")
 video_link = "Upload Failed"
 
-# Layer 1: Litterbox (Handles up to 1GB files and gives direct MP4 link, perfect for n8n)
+# Layer 1: Pixeldrain API (Extremely reliable for HD/Heavy files)
 if video_link == "Upload Failed":
     try:
-        print("Trying Litterbox API (1GB limit)...")
-        res = requests.post("https://litterbox.catbox.moe/resources/internals/api.php", data={'reqtype': 'fileupload', 'time': '12h'}, files={'fileToUpload': open('final_video.mp4', 'rb')}, timeout=1200)
-        if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"Litterbox failed: {e}")
+        print("Trying Pixeldrain API...")
+        with open('final_video.mp4', 'rb') as f:
+            res = requests.post("https://pixeldrain.com/api/file", files={'file': f}, timeout=1200)
+        
+        if res.status_code in [200, 201]:
+            data = res.json()
+            if data.get("success"):
+                # Yeh direct download link n8n HTTP Request node ke liye perfect hai
+                video_link = f"https://pixeldrain.com/api/file/{data['id']}"
+    except Exception as e:
+        print(f"Pixeldrain upload failed: {e}")
 
-# Layer 2: Bashupload (Handles unlimited sizes)
+# Layer 2: transfer.sh (Safety Fallback up to 10GB)
 if video_link == "Upload Failed":
     try:
-        print("Trying Bashupload API...")
-        res = subprocess.run(['curl', 'https://bashupload.com/', '-T', 'final_video.mp4'], capture_output=True, text=True)
-        import re
-        links = re.findall(r'https://bashupload\.com/\S+', res.stdout)
-        if links: video_link = links[0]
-    except Exception as e: print(f"Bashupload failed: {e}")
-
-# Layer 3: transfer.sh (High capacity file transfer up to 10GB)
-if video_link == "Upload Failed":
-    try:
-        print("Trying transfer.sh API...")
+        print("Trying transfer.sh API (Fallback)...")
         with open('final_video.mp4', 'rb') as f:
             res = requests.put("https://transfer.sh/final_video.mp4", data=f, timeout=1200)
         if res.text.startswith("http"): video_link = res.text.strip()
