@@ -21,12 +21,8 @@ thumbnail_prompt = os.environ.get('THUMBNAIL_PROMPT', 'Cinematic beautiful thumb
 
 print(f"Total Scenes to render: {len(scenes_data)}")
 
-subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', full_text, '--write-media', 'voiceover.mp3'])
-voiceover = AudioFileClip("voiceover.mp3")
-
-total_chars = sum(len(s['text']) for s in scenes_data)
 rendered_files = [] 
-audio_clips = [voiceover]
+audio_clips = [] # Changed: Start empty, we will add scene-specific audios here perfectly synced
 headers = {"Authorization": pexels_key}
 current_time = 0.0
 
@@ -42,12 +38,30 @@ TARGET_W, TARGET_H = 1920, 1080
 for i, scene in enumerate(scenes_data):
     keyword = scene.get('keyword', 'nature')
     text_line = scene.get('text', '')
-    scene_duration = voiceover.duration * (len(text_line) / max(total_chars, 1))
+    
+    # 🚀 PERFECT SYNC LOGIC: Generate TTS Audio ONLY for this specific line!
+    # Aisa karne se har line ki exact duration pata chalegi aur sync kabhi out nahi hoga.
+    scene_audio_path = f"scene_audio_{i}.mp3"
+    subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', text_line, '--write-media', scene_audio_path])
+    
+    try:
+        scene_audio = AudioFileClip(scene_audio_path)
+        scene_duration = scene_audio.duration
+        # Add this specific audio exactly where this scene starts in the master timeline
+        audio_clips.append(scene_audio.set_start(current_time))
+    except Exception as e:
+        print(f"Audio error for scene {i}: {e}")
+        scene_duration = 2.0 # fallback
+        
     if scene_duration < 1.0: scene_duration = 1.0
     
     try:
         res = requests.get(f"https://api.pexels.com/videos/search?query={keyword}&per_page=1&orientation=landscape", headers=headers).json()
-        video_url = res['videos'][0]['video_files'][0]['link']
+        
+        # 🔥 HD Video Fetching Logic
+        video_files = res['videos'][0]['video_files']
+        video_files.sort(key=lambda x: x.get('width', 0), reverse=True)
+        video_url = video_files[0]['link']
         
         vid_path = f"vid_{i}.mp4"
         with open(vid_path, "wb") as f:
@@ -61,7 +75,7 @@ for i, scene in enumerate(scenes_data):
         
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
         
-        # 🔥 ADVANCED KINETIC TEXT ENGINE (Perfect Sync & Animations) 🔥
+        # 🔥 ADVANCED KINETIC TEXT ENGINE 🔥
         def advanced_punch_anim(t):
             if t < 0.06: return 1.6 - 10.0 * t  
             elif t < 0.15: return 1.0 + 1.2 * (t - 0.06) 
@@ -91,6 +105,7 @@ for i, scene in enumerate(scenes_data):
             total_weight = sum(word_weights) if sum(word_weights) > 0 else 1
             current_time_pos = 0.0
 
+            # Ab duration_per_word exact scene_duration (audio) ke basis par banega
             for w_i, word in enumerate(words):
                 word_lower = word.lower()
                 is_danger = any(kw in word_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'tool', 'ai'])
@@ -123,26 +138,25 @@ for i, scene in enumerate(scenes_data):
 
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
         
-        # --- MEMORY FIX START ---
+        # --- MEMORY FIX ---
         scene_filename = f"scene_rendered_{i}.mp4"
-        final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="ultrafast", audio=False, logger=None)
+        final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="fast", bitrate="5000k", audio=False, logger=None)
         rendered_files.append(scene_filename)
         
         final_scene.close()
         clip.close()
         del final_scene, clip, zoomed_clip, word_clips, dark_overlay
         gc.collect()
-        # --- MEMORY FIX END ---
         
         if whoosh_sfx: audio_clips.append(whoosh_sfx.set_start(current_time))
         if pop_sfx: audio_clips.append(pop_sfx.set_start(current_time + 0.1))
                 
         current_time += scene_duration
-        print(f"Scene {i+1} Ready: {keyword}")
+        print(f"Scene {i+1} Ready & PERFECTLY Synced: {keyword}")
     except Exception as e:
         print(f"Error on scene {i}: {e}")
 
-# --- DISK CONCATENATION FIX START ---
+# --- DISK CONCATENATION FIX ---
 print("Merging scenes without RAM...")
 with open("concat_list.txt", "w") as f:
     for file in rendered_files:
@@ -150,7 +164,6 @@ with open("concat_list.txt", "w") as f:
 
 subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'concat_list.txt', '-c', 'copy', 'merged_scenes.mp4'])
 final_video = VideoFileClip("merged_scenes.mp4")
-# --- DISK CONCATENATION FIX END ---
 
 final_duration = final_video.duration
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
@@ -159,7 +172,6 @@ progress_bar = progress_bar.set_duration(final_duration)
 
 # 🔥 AIToolKitHub Watermark Implementation 🔥
 watermark = TextClip("AIToolKitHub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=2)
-# Opacity 0.5 (semi-transparent) and positioned perfectly in the bottom-right corner
 watermark = watermark.set_opacity(0.5).set_position((0.78, 0.88), relative=True).set_duration(final_duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
@@ -171,11 +183,13 @@ try:
     audio_clips.append(bgm)
 except: pass
 
+# Saare scene audios, SFX, aur BGM yahan ek saath merge ho rahe hain exact timing ke sath
 final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
-print("Rendering Final COMPRESSED LONG Video...")
-final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="1000k", preset="ultrafast")
+print("Rendering Final HIGH QUALITY LONG Video...")
+# 🔥 High quality bitrate
+final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="5000k", preset="fast")
 
 print("Starting 5-Layer Indestructible Upload System...")
 video_link = "Upload Failed"
@@ -213,7 +227,6 @@ print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 # 🌟 TELEGRAM BRIDGE - WITH PIPE (|) SEPARATOR FOR SAFETY
 BOT_TOKEN = "8687740956:AAFwnDe9pNXdHtmAjlLZix3ebQxslTytUwY" 
 
-# Pipe separator ensures multi-line descriptions don't break the n8n logic
 message_text = f"READY_TO_UPLOAD|{video_link}|{title}|{thumbnail_prompt}|{description}"
 
 try:
