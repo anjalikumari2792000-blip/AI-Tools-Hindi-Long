@@ -22,7 +22,7 @@ thumbnail_prompt = os.environ.get('THUMBNAIL_PROMPT', 'Cinematic beautiful thumb
 print(f"Total Scenes to render: {len(scenes_data)}")
 
 rendered_files = [] 
-audio_clips = [] # Changed: Start empty, we will add scene-specific audios here perfectly synced
+audio_clips = [] # Scene-specific audios perfectly synced
 headers = {"Authorization": pexels_key}
 current_time = 0.0
 
@@ -39,7 +39,7 @@ for i, scene in enumerate(scenes_data):
     keyword = scene.get('keyword', 'nature')
     text_line = scene.get('text', '')
     
-    # 🚀 PERFECT SYNC LOGIC: Generate TTS Audio ONLY for this specific line!
+    # 🚀 PERFECT SYNC LOGIC: Generate TTS Audio ONLY for this specific line
     scene_audio_path = f"scene_audio_{i}.mp3"
     subprocess.run(['edge-tts', '--voice', 'hi-IN-MadhurNeural', '--text', text_line, '--write-media', scene_audio_path])
     
@@ -49,7 +49,7 @@ for i, scene in enumerate(scenes_data):
         audio_clips.append(scene_audio.set_start(current_time))
     except Exception as e:
         print(f"Audio error for scene {i}: {e}")
-        scene_duration = 2.0 # fallback
+        scene_duration = 2.0 
         
     if scene_duration < 1.0: scene_duration = 1.0
     
@@ -73,7 +73,7 @@ for i, scene in enumerate(scenes_data):
         
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
         
-        # 🔥 ADVANCED KINETIC TEXT ENGINE (Perfect Sync & Animations) 🔥
+        # 🔥 ADVANCED KINETIC TEXT ENGINE 🔥
         def advanced_punch_anim(t):
             if t < 0.06: return 1.6 - 10.0 * t  
             elif t < 0.15: return 1.0 + 1.2 * (t - 0.06) 
@@ -92,7 +92,6 @@ for i, scene in enumerate(scenes_data):
         word_clips = []
 
         if words:
-            # 🚀 SMART SUBTITLE SYNCHRONIZATION 🚀
             word_weights = []
             for w in words:
                 wt = len(w)
@@ -135,7 +134,7 @@ for i, scene in enumerate(scenes_data):
 
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
         
-        # --- MEMORY FIX START ---
+        # --- MEMORY FIX ---
         scene_filename = f"scene_rendered_{i}.mp4"
         final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="fast", bitrate="5000k", audio=False, logger=None)
         rendered_files.append(scene_filename)
@@ -144,17 +143,16 @@ for i, scene in enumerate(scenes_data):
         clip.close()
         del final_scene, clip, zoomed_clip, word_clips, dark_overlay
         gc.collect()
-        # --- MEMORY FIX END ---
         
         if whoosh_sfx: audio_clips.append(whoosh_sfx.set_start(current_time))
         if pop_sfx: audio_clips.append(pop_sfx.set_start(current_time + 0.1))
                 
         current_time += scene_duration
-        print(f"Scene {i+1} Ready: {keyword}")
+        print(f"Scene {i+1} Ready & PERFECTLY Synced: {keyword}")
     except Exception as e:
         print(f"Error on scene {i}: {e}")
 
-# --- DISK CONCATENATION FIX START ---
+# --- DISK CONCATENATION FIX ---
 print("Merging scenes without RAM...")
 with open("concat_list.txt", "w") as f:
     for file in rendered_files:
@@ -162,16 +160,13 @@ with open("concat_list.txt", "w") as f:
 
 subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'concat_list.txt', '-c', 'copy', 'merged_scenes.mp4'])
 final_video = VideoFileClip("merged_scenes.mp4")
-# --- DISK CONCATENATION FIX END ---
 
 final_duration = final_video.duration
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
 progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (t / max(final_duration, 1))), 'bottom'))
 progress_bar = progress_bar.set_duration(final_duration)
 
-# 🔥 AIToolKitHub Watermark Implementation 🔥
 watermark = TextClip("AIToolKitHub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=2)
-# Opacity 0.5 (semi-transparent) and positioned perfectly in the bottom-right corner
 watermark = watermark.set_opacity(0.5).set_position((0.78, 0.88), relative=True).set_duration(final_duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
@@ -186,46 +181,45 @@ except: pass
 final_audio = CompositeAudioClip(audio_clips)
 final_video = final_video.set_audio(final_audio)
 
-print("Rendering Final COMPRESSED LONG Video...")
+print("Rendering Final HIGH QUALITY LONG Video...")
+# 📌 5000k Bitrate retained as requested
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="5000k", preset="fast")
 
-print("Starting 5-Layer Indestructible Upload System...")
+print("Starting Heavy-File Compatible Upload System (For 200MB+ Files)...")
 video_link = "Upload Failed"
 
-if not video_link.startswith("http"):
+# Layer 1: Litterbox (Handles up to 1GB files and gives direct MP4 link, perfect for n8n)
+if video_link == "Upload Failed":
     try:
-        print("Trying 0x0.st API...")
-        res = requests.post("https://0x0.st", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
+        print("Trying Litterbox API (1GB limit)...")
+        res = requests.post("https://litterbox.catbox.moe/resources/internals/api.php", data={'reqtype': 'fileupload', 'time': '12h'}, files={'fileToUpload': open('final_video.mp4', 'rb')}, timeout=1200)
         if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"0x0.st failed: {e}")
+    except Exception as e: print(f"Litterbox failed: {e}")
 
-if not video_link.startswith("http"):
+# Layer 2: Bashupload (Handles unlimited sizes)
+if video_link == "Upload Failed":
     try:
-        print("Trying Uguu.se API...")
-        res = requests.post("https://uguu.se/upload.php", files={'files[]': open('final_video.mp4', 'rb')}, timeout=600)
-        if res.status_code == 200: video_link = res.json()['files'][0]['url']
-    except Exception as e: print(f"Uguu.se failed: {e}")
+        print("Trying Bashupload API...")
+        res = subprocess.run(['curl', 'https://bashupload.com/', '-T', 'final_video.mp4'], capture_output=True, text=True)
+        import re
+        links = re.findall(r'https://bashupload\.com/\S+', res.stdout)
+        if links: video_link = links[0]
+    except Exception as e: print(f"Bashupload failed: {e}")
 
-if not video_link.startswith("http"):
+# Layer 3: transfer.sh (High capacity file transfer up to 10GB)
+if video_link == "Upload Failed":
     try:
-        print("Trying Tmpfiles API...")
-        res = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
-        if res.status_code == 200: video_link = res.json()['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
-    except Exception as e: print(f"Tmpfiles failed: {e}")
-
-if not video_link.startswith("http"):
-    try:
-        print("Trying Catbox API...")
-        res = requests.post("https://catbox.moe/user/api.php", data={'reqtype': 'fileupload'}, files={'fileToUpload': open('final_video.mp4', 'rb')}, timeout=600)
+        print("Trying transfer.sh API...")
+        with open('final_video.mp4', 'rb') as f:
+            res = requests.put("https://transfer.sh/final_video.mp4", data=f, timeout=1200)
         if res.text.startswith("http"): video_link = res.text.strip()
-    except Exception as e: print(f"Catbox failed: {e}")
+    except Exception as e: print(f"transfer.sh failed: {e}")
 
 print(f"🔥 FINAL YOUTUBE LINK: {video_link} 🔥")
 
-# 🌟 TELEGRAM BRIDGE - WITH PIPE (|) SEPARATOR FOR SAFETY
+# 🌟 TELEGRAM BRIDGE 
 BOT_TOKEN = "8687740956:AAFwnDe9pNXdHtmAjlLZix3ebQxslTytUwY" 
 
-# Pipe separator ensures multi-line descriptions don't break the n8n logic
 message_text = f"READY_TO_UPLOAD|{video_link}|{title}|{thumbnail_prompt}|{description}"
 
 try:
