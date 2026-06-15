@@ -395,28 +395,17 @@ final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_co
 print("Starting Core Indestructible Upload System...")
 video_link = "Upload Failed"
 
-endpoints = [
-    ("File.io", "https://file.io", "file", lambda r: r.json()['link']),
-    ("0x0.st", "https://0x0.st", "file", lambda r: r.text.strip()),
-    ("Uguu.se", "https://uguu.se/upload.php", "files[]", lambda r: r.json()['files'][0]['url']),
-    ("Catbox.moe", "https://catbox.moe/user/api.php", "reqtype", lambda r: r.text.strip())
-]
-
-for name, url, field, get_link in endpoints:
-    if video_link != "Upload Failed" and video_link.startswith("http"): break
-    try:
-        print(f"Trying upload to {name}...")
-        files = {field: open("final_video.mp4", 'rb')}
-        data = {'reqtype': 'fileupload'} if "catbox" in url else {}
-        res = requests.post(url, files=files, data=data, timeout=300)
-        
-        if res.status_code == 200:
-            link = get_link(res)
-            if "http" in link: 
-                video_link = link
-                print(f"✅ Upload Success: {video_link}")
-    except Exception as e: 
-        print(f"❌ {name} failed: {e}")
+try:
+    print("Uploading final video to tmpfiles.org...")
+    resp = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
+    
+    if resp.status_code == 200:
+        video_link = resp.json()['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
+        print(f"✅ Upload Success: {video_link}")
+    else:
+        print(f"❌ Upload API Error {resp.status_code}: {resp.text}")
+except Exception as e:
+    print(f"❌ Upload failed: {e}")
 
 # ==========================================
 # TELEGRAM BRIDGE
