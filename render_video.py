@@ -68,10 +68,9 @@ for i, scene in enumerate(scenes_data):
         print(f"Audio failed for scene {i}: {e}")
         continue
         
-    # 🚀 OPTIMIZED TOPIC-BASED VIDEO FETCHING (Matches exactly what TTS says) 🚀
+    # 🚀 OPTIMIZED TOPIC-BASED VIDEO FETCHING 🚀
     try:
         kw_lower = keyword.lower()
-        # Checks if context belongs to AI, Software, Web, Traffic or SEO
         if any(k in kw_lower for k in ['ai', 'tech', 'robot', 'bot', 'website', 'crypto', 'chatgpt', 'software', 'seo', 'traffic', 'internet', 'computer']):
             search_query = f"{keyword} technology abstract"
         elif any(k in kw_lower for k in ['money', 'earn', 'finance', 'wealth', 'cash', 'rich', 'income', 'profit', 'business', 'sale']):
@@ -103,218 +102,83 @@ for i, scene in enumerate(scenes_data):
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
         dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.40).set_duration(scene_duration).set_position(('center', 'center'))
         
-        # 🔥 ULTRA-PREMIUM KINETIC TEXT ENGINE (Directional 3D Projection Mastery) 🔥
-        def premium_elastic_pop(t):
-            if t == 0: return 0.3
-            if t < 0.05:
-                return 0.3 + 0.7 * (t / 0.05)
-            t_norm = min((t - 0.05) / 0.20, 1.0)
-            val = 1.0 + 0.15 * math.sin(t_norm * math.pi * 3.0) * math.exp(-t_norm * 4.0)
-            return val
+        # 🔥 ANDROID TRICKS TEXT ENGINE (Word by Word Sync) 🔥
+        def advanced_punch_anim(t):
+            if t < 0.06: return 1.6 - 10.0 * t  
+            elif t < 0.15: return 1.0 + 1.2 * (t - 0.06) 
+            return 1.0
 
-        def get_kinetic_pos(clip_w, clip_h, base_y, is_shaking, phrase_idx, x_offset=0, y_offset=0):
+        def get_kinetic_pos(base_y, is_shaking, word_idx):
             def pos(t):
-                # Smooth organic floating wave
-                idle_y = 3.0 * math.sin(t * 4.5 + phrase_idx)
-                idle_x = 1.5 * math.cos(t * 3.5 + phrase_idx)
-                
-                # Center the bounding box horizontally and vertically on screen
-                final_x = (TARGET_W - clip_w) / 2 + idle_x + x_offset
-                final_y = base_y - (clip_h / 2) + idle_y + y_offset
-
-                if is_shaking and t > 0.04:
-                    return (final_x + 5.5 * math.sin(t * 88), final_y + 5.5 * math.cos(t * 93))
-                return (final_x, final_y)
+                idle_y = 7 * math.sin(t * 8 + word_idx)
+                idle_x = 4 * math.cos(t * 6 + word_idx)
+                if is_shaking and t > 0.06:
+                    return (TARGET_W/2 + 5 * math.sin(t * 75) + idle_x, base_y + 5 * math.cos(t * 85) + idle_y)
+                return (TARGET_W/2 + idle_x, base_y + idle_y)
             return pos
 
-        raw_words = text_line.split()
-        
-        # 🚀 SMART PHRASE GROUPING SYSTEM (2-3 Words Display) 🚀
-        phrases = []
-        temp_phrase = []
-        for w in raw_words:
-            temp_phrase.append(w)
-            if len(temp_phrase) >= 2 or w.endswith(',') or w[-1] in '.?!।':
-                phrases.append(" ".join(temp_phrase))
-                temp_phrase = []
-        if temp_phrase:
-            phrases.append(" ".join(temp_phrase))
-
+        words = text_line.split()
+        danger_timestamps = []
         word_clips = []
 
-        if phrases:
-            phrase_weights = []
-            for p in phrases:
-                wt = len(p)
-                if p.endswith(','): wt += 3  
-                elif p[-1] in '.?!।': wt += 6 
-                phrase_weights.append(wt)
+        if words:
+            word_weights = []
+            for w in words:
+                wt = len(w)
+                if w.endswith(','): wt += 4 
+                elif w[-1] in '.?!।': wt += 8 
+                word_weights.append(wt)
             
-            total_weight = sum(phrase_weights) if sum(phrase_weights) > 0 else 1
+            total_weight = sum(word_weights) if sum(word_weights) > 0 else 1
             current_time_pos = 0.0
 
-            for p_i, phrase_text in enumerate(phrases):
-                phrase_clean = phrase_text.upper()
-                phrase_lower = phrase_text.lower()
+            for w_i, word in enumerate(words):
+                word_lower = word.lower()
+                is_danger = any(kw in word_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'paisa', 'paise', 'income', 'profit', 'earn'])
+                is_highlight = not is_danger and len(word) > 5
                 
-                # Highlight & Danger keyword triggers
-                is_danger = any(kw in phrase_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'paisa', 'paise', 'income', 'profit', 'earn'])
-                is_highlight = not is_danger and any(len(w) > 4 for w in phrase_text.split())
+                duration_per_word = (word_weights[w_i] / total_weight) * scene_duration
                 
-                duration_per_phrase = (phrase_weights[p_i] / total_weight) * scene_duration
+                if is_danger or is_highlight:
+                    danger_timestamps.append((current_time_pos, current_time_pos + duration_per_word))
 
-                # Curated High-Vibrancy Modern Color Palette
-                current_color = '#FF0044' if is_danger else ('#0D0D0D' if is_highlight else '#FFFFFF')
-                
-                # Intelligent Semantic Color Engine based on scene context keyword
-                if is_danger:
-                    bg_color = 'transparent'
-                elif is_highlight:
-                    if any(k in kw_lower for k in ['ai', 'tech', 'robot', 'bot', 'website', 'crypto', 'chatgpt', 'software', 'seo', 'traffic']):
-                        bg_color = '#00FFFF'  # Cyber Neon Cyan
-                    elif any(k in kw_lower for k in ['money', 'earn', 'finance', 'wealth', 'rich', 'cash', 'income', 'profit', 'business']):
-                        bg_color = '#00FF55'  # Premium Neon Green
-                    else:
-                        bg_color = '#FFEA00'  # High-Contrast Vibrant Yellow
-                else:
-                    bg_color = 'transparent'
-                
-                # 🚀 SMART DISPLAY REPLACEMENT ENGINE (TTS filter back to premium clean text) 🚀
-                display_phrase = phrase_clean
+                current_color = '#FF003C' if is_danger else ('#000000' if is_highlight else '#FFFFFF')
+                bg_color = 'transparent' if is_danger else (random.choice(['#FFD400', '#39FF14']) if is_highlight else 'transparent')
+                base_size = 155 if is_danger else (140 if is_highlight else 90)
+
+                # 🚀 SMART DISPLAY REPLACEMENT ENGINE (AIToolkitHub's pure text logic applied to single word) 🚀
+                display_word = word
                 replacements = {
-                    "SEY": "SE", "KEY": "KE", "NEY": "NE", "DEY": "DE", "KAISEY": "KAISE", "AISEY": "AISE",
-                    "HOTEY": "HOTE", "KARTEY": "KARTE", "APNEY": "APNE", "SAMAJHTEY": "SAMAJHTE", 
-                    "PEHLEY": "PEHLE", "KARKEY": "KARKE", "CHALEY": "CHALE", "PURAANEY": "PURANE", "BACHCHEY": "BACHCHE",
-                    "KIYAA": "KIYA", "DIYAA": "DIYA", "LIYAA": "LIYA", "SIKHAATEE": "SIKHATI", 
-                    "DIKHAATEY": "DIKHATE", "CHAAHATEY": "CHAHTE", "BANAATEY": "BANATE", 
-                    "SBB": "SAB", "ABB": "AB", "THEY": "THE", "TARIKAY": "TARIKA", "BUND": "BAND", "MUT": "MAT", "JUB": "JAB", "PUL": "PAL"
+                    "sey": "se", "key": "ke", "ney": "ne", "dey": "de", "kaisey": "kaise", "aisey": "aise",
+                    "hotey": "hote", "kartey": "karte", "apney": "apne", "samajhtey": "samajhte", 
+                    "pehley": "pehle", "karkey": "karke", "chaley": "chale", "puraaney": "purane", "bachchey": "bachche",
+                    "kiyaa": "kiya", "diyaa": "diya", "liyaa": "liya", "sikhaatee": "sikhati", 
+                    "dikhaatey": "dikhate", "chaahatey": "chahte", "banaatey": "banate", 
+                    "sbb": "sab", "abb": "ab", "they": "the", "tarikay": "tarika", "bund": "band", "mut": "mat", "jub": "jab", "pul": "pal"
                 }
-                for k, v in replacements.items():
-                    display_phrase = display_phrase.replace(f" {k} ", f" {v} ")
-                    if display_phrase.startswith(k + " "): display_phrase = display_phrase.replace(k + " ", v + " ", 1)
-                    if display_phrase.endswith(" " + k): display_phrase = display_phrase.replace(" " + k, " " + v, 1)
-                    if display_phrase == k: display_phrase = v
-
-                # Continuous Proportional Font Scaling based on visual string character length
-                char_count = len(display_phrase.strip())
-                if char_count > 14:
-                    base_size = max(125, 165 - (char_count - 11) * 3)
-                elif char_count > 7:
-                    base_size = 155
-                else:
-                    base_size = 170
-                    
-                if is_danger: base_size += 10
-                
-                # Dynamic Adaptive Spacing (Smart Tracking metrics calculation)
-                adaptive_kerning = 4 if char_count <= 8 else (3 if char_count <= 14 else 1.5)
-                
-                # Add micro space padding horizontally for premium sticker badge spacing
-                if bg_color != 'transparent':
-                    display_phrase = f"  {display_phrase}  "
-                
-                phrase_tilt = random.choice([-2.5, -1, 1, 2.5]) if (is_danger or is_highlight) else random.choice([-1, 0, 1])
+                clean_w = display_word.replace(',', '').replace('.', '').replace('?', '').replace('!', '').replace('।', '').lower()
+                if clean_w in replacements:
+                    display_word = display_word.replace(clean_w, replacements[clean_w]).replace(clean_w.upper(), replacements[clean_w].upper()).replace(clean_w.capitalize(), replacements[clean_w].capitalize())
 
                 try:
-                    text_y_pos = TARGET_H * 0.76  # Safe zone position
-                    
-                    if bg_color == 'transparent':
-                        box_width = 1600 
-                        
-                        # Pre-generate layers to extract exact post-rotation dimensions
-                        main_txt_layer = TextClip(display_phrase, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning).rotate(phrase_tilt)
-                        rotated_w = main_txt_layer.w
-                        rotated_h = main_txt_layer.h
-                        main_txt_layer.close()
-                        
-                        # Ambient Neon Radiance Glow Aura Layer
-                        glow_color = '#FF0044' if is_danger else '#FFFFFF'
-                        glow_txt = TextClip(display_phrase, fontsize=base_size, color=glow_color, font=HINDI_FONT_FILE, stroke_color=glow_color, stroke_width=45, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_opacity(0.18) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        # True Directional 3D Projection Math Engine based on Rotation Angle
-                        rad_tilt = math.radians(phrase_tilt)
-                        cos_t = math.cos(rad_tilt)
-                        sin_t = math.sin(rad_tilt)
-                        
-                        # Generates gapless geometric projection stack vector points mapping
-                        dx4, dy4 = int(14 * cos_t + 16 * sin_t), int(-14 * sin_t + 16 * cos_t)
-                        dx3, dy3 = int(9 * cos_t + 11 * sin_t), int(-9 * sin_t + 11 * cos_t)
-                        dx2, dy2 = int(5 * cos_t + 6 * sin_t), int(-5 * sin_t + 6 * cos_t)
-                        
-                        # 4-Stage Progressive Projected Shadow Layers
-                        shadow_4 = TextClip(display_phrase, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i, x_offset=dx4, y_offset=dy4)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        shadow_3 = TextClip(display_phrase, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i, x_offset=dx3, y_offset=dy3)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
+                    text_y_pos = TARGET_H * 0.75 
+                    position_filter = get_kinetic_pos(text_y_pos, is_danger, w_i)
 
-                        shadow_2 = TextClip(phrase_clean, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i, x_offset=dx2, y_offset=dy2)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        # Master Heavy Background Stroke
-                        bg_txt = TextClip(display_phrase, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=24, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        # Inner Clean Crisp Outline
-                        inner_border_txt = TextClip(display_phrase, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='white', stroke_width=6, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        # Primary Front Text Layer
-                        main_txt = TextClip(display_phrase, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE, method='caption', size=(box_width, None), align='Center', interline=-6, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        word_clips.extend([glow_txt, shadow_4, shadow_3, shadow_2, bg_txt, inner_border_txt, main_txt])
+                    if bg_color == 'transparent':
+                        shadow_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(get_kinetic_pos(text_y_pos + 15, is_danger, w_i)).set_duration(duration_per_word).set_start(current_time_pos)
+                        bg_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=16, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        inner_border_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='white', stroke_width=4, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        word_clips.extend([shadow_txt, bg_txt, inner_border_txt, main_txt])
                     else:
-                        # Extract exact post-rotation layout dimensions for badge highlights
-                        temp_badge = TextClip(display_phrase, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE, kerning=adaptive_kerning).rotate(phrase_tilt)
-                        rotated_w = temp_badge.w
-                        rotated_h = temp_badge.h
-                        temp_badge.close()
-                        
-                        # Soft Neon Glow backing for premium badge highlights
-                        glow_txt = TextClip(display_phrase, fontsize=base_size, color=bg_color, font=HINDI_FONT_FILE, stroke_color=bg_color, stroke_width=35, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_opacity(0.15) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        rad_tilt = math.radians(phrase_tilt)
-                        bx_off, by_off = int(11 * math.cos(rad_tilt) + 13 * math.sin(rad_tilt)), int(-11 * math.sin(rad_tilt) + 13 * math.cos(rad_tilt))
-                        
-                        bg_shadow = TextClip(display_phrase, fontsize=base_size, color='black', bg_color='black', font=HINDI_FONT_FILE, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i, x_offset=bx_off, y_offset=by_off)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                            
-                        main_txt = TextClip(display_phrase, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE, kerning=adaptive_kerning) \
-                            .resize(premium_elastic_pop).rotate(phrase_tilt) \
-                            .set_position(get_kinetic_pos(rotated_w, rotated_h, text_y_pos, is_danger, p_i)) \
-                            .set_duration(duration_per_phrase).set_start(current_time_pos)
-                        
-                        word_clips.extend([glow_txt, bg_shadow, main_txt])
+                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE, method='caption', size=(None, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        word_clips.append(main_txt)
                 except: pass
                 
-                current_time_pos += duration_per_phrase
+                current_time_pos += duration_per_word
 
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
         
-        # Render Scene using "superfast" for sharp intermediate text compression quality
         scene_filename = f"scene_rendered_{i}.mp4"
         final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="superfast", audio=False, logger=None)
         
@@ -385,7 +249,6 @@ except: pass
 final_combined_audio = CompositeAudioClip(master_audio_clips)
 final_video = final_video.set_audio(final_combined_audio)
 
-# Increased bitrate to 3000k and optimized preset to "superfast" for premium quality compression bounds
 print("Rendering Final COMPRESSED LONG Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="3000k", preset="superfast")
 
