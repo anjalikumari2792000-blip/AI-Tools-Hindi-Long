@@ -421,7 +421,7 @@ for name, url, field, get_link in endpoints:
 # ==========================================
 # TELEGRAM BRIDGE
 # ==========================================
-BOT_TOKEN = "7707041789:AAFB0DUbGlypExkUjxm0qpJC60Cj5HFLd-E" 
+BOT_TOKEN = "8519514437:AAGt391NG3FPuciBLtCAt0XHIbEqwDef0vU" 
 
 safe_description = str(description).replace('\n', '  ')
 safe_title = str(title).replace('|', '')
