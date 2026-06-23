@@ -273,7 +273,7 @@ except Exception as e:
 # ==========================================
 # TELEGRAM BRIDGE
 # ==========================================
-BOT_TOKEN = "8687740956:AAFwnDe9pNXdHtmAjlLZix3ebQxslTytUwY" 
+BOT_TOKEN = "8879785819:AAFy8nTXBpl696L5YQdDnUmOZgZh5VwsYTs" 
 
 safe_description = str(description).replace('\n', '  ')
 safe_title = str(title).replace('|', '')
