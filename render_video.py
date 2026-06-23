@@ -253,47 +253,26 @@ print("Rendering Final COMPRESSED LONG Video...")
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="3000k", preset="superfast")
 
 # ==========================================
-# UPLOAD SYSTEM
+# UPLOAD SYSTEM & TELEGRAM BRIDGE (UPDATED)
 # ==========================================
-print("Starting Core Indestructible Upload System...")
-video_link = "Upload Failed"
+BOT_TOKEN = "8879785819:AAFy8nTXBpl696L5YQdDnUmOZgZh5VwsYTs" # AIToolkit Hub Bot Token
 
 try:
-    print("Uploading final video to tmpfiles.org...")
+    print("Uploading final video...")
     resp = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
     
     if resp.status_code == 200:
         video_link = resp.json()['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
-        print(f"✅ Upload Success: {video_link}")
-    else:
-        print(f"❌ Upload API Error {resp.status_code}: {resp.text}")
-except Exception as e:
-    print(f"❌ Upload failed: {e}")
-
-# ==========================================
-# TELEGRAM BRIDGE
-# ==========================================
-BOT_TOKEN = "8879785819:AAFy8nTXBpl696L5YQdDnUmOZgZh5VwsYTs" 
-
-safe_description = str(description).replace('\n', '  ')
-safe_title = str(title).replace('|', '')
-
-if not chat_id or chat_id == "None":
-    print("❌ Error: CHAT_ID is missing. Cannot send Telegram message.")
-else:
-    message_text = f"READY_TO_UPLOAD|{video_link}|{safe_title}|{thumbnail_prompt}|{safe_description}"
-    
-    if len(message_text) > 4000:
-        message_text = message_text[:3990] + "...[TRUNC]"
-
-    try:
-        telegram_url = f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage"
-        payload = {"chat_id": str(chat_id).strip(), "text": message_text}
-        response = requests.post(telegram_url, json=payload)
         
-        if response.status_code == 200:
-            print(f"✅ Webhook bypassed! Sent video details directly to Telegram! Status: {response.status_code}")
-        else:
-            print(f"❌ Telegram alert failed! Status: {response.status_code}, Error: {response.text}")
-    except Exception as e:
-        print(f"❌ Failed to send Telegram alert: {e}")
+        # Yahan dynamic variables use ho rahe hain jo n8n se aaye hain
+        final_msg = f"READY_TO_UPLOAD|{video_link}|{title}|{thumbnail_prompt}|{description}"
+        
+        requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": final_msg})
+        print(f"✅ Upload Success & Telegram Alert Sent: {video_link}")
+    else:
+        raise Exception(f"Upload API Error {resp.status_code}: {resp.text}")
+
+except Exception as e:
+    error_msg = f"🚨 *PIPELINE FAILED!*\n*Error:* `{str(e)[:100]}`"
+    requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": error_msg, "parse_mode": "Markdown"})
+    print(f"❌ Pipeline Failed: {e}")
