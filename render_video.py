@@ -250,7 +250,8 @@ final_combined_audio = CompositeAudioClip(master_audio_clips)
 final_video = final_video.set_audio(final_combined_audio)
 
 print("Rendering Final COMPRESSED LONG Video...")
-final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="3000k", preset="superfast")
+# Bitrate fix: 3000k se 1200k kiya gaya hai to bypass tmpfiles.org 413 Payload Error
+final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="1200k", preset="superfast")
 
 # ==========================================
 # UPLOAD SYSTEM & TELEGRAM BRIDGE (UPDATED)
