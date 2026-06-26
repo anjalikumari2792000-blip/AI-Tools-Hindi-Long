@@ -234,7 +234,8 @@ progress_bar = progress_bar.set_duration(final_video.duration)
 
 # 🔥 AIToolKit Hub Watermark Implementation 🔥
 watermark = TextClip("AIToolKit Hub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3)
-watermark = watermark.set_opacity(0.6).set_position((0.75, 0.88), relative=True).set_duration(final_video.duration)
+# Opacity 0.5 (semi-transparent) and positioned perfectly in the bottom-right corner
+watermark = watermark.set_opacity(0.5).set_position((0.75, 0.88), relative=True).set_duration(final_video.duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
 
@@ -251,7 +252,7 @@ final_video = final_video.set_audio(final_combined_audio)
 
 print("Rendering Final COMPRESSED LONG Video...")
 # Bitrate fix: 3000k se 1200k kiya gaya hai to bypass tmpfiles.org 413 Payload Error
-final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="1200k", preset="superfast")
+final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="2000k", preset="ultrafast")
 
 # ==========================================
 # UPLOAD SYSTEM & TELEGRAM BRIDGE (UPDATED)
