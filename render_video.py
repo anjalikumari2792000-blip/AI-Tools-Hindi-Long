@@ -1,4 +1,4 @@
-import os, sys, requests, json, subprocess, socket, gc, math, random
+import os, sys, requests, json, subprocess, socket, gc, math, random, time
 import urllib3.util.connection as urllib3_cn
 from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, ColorClip, afx
 
@@ -259,20 +259,31 @@ final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_co
 # ==========================================
 BOT_TOKEN = "8879785819:AAFy8nTXBpl696L5YQdDnUmOZgZh5VwsYTs" # AIToolkit Hub Bot Token
 
+print("\n🚀 Uploading Video directly to GitHub Releases...")
+
+run_id = os.environ.get('GITHUB_RUN_ID', str(int(time.time())))
+tag_name = f"vid-{run_id}"
+
+# Note: Aap ise apne repository name se replace kar sakte hain [cite: 37]
+repo_name = os.environ.get('GITHUB_REPOSITORY', "amu8085-lab/my-project1") 
+video_link = None
+
 try:
-    print("Uploading final video...")
-    resp = requests.post("https://tmpfiles.org/api/v1/upload", files={'file': open('final_video.mp4', 'rb')}, timeout=600)
+    cmd = ['gh', 'release', 'create', tag_name, 'final_video.mp4', '--repo', repo_name, '--notes', 'Automated Video Render'] [cite: 38]
+    proc = subprocess.run(cmd, capture_output=True, text=True)
     
-    if resp.status_code == 200:
-        video_link = resp.json()['data']['url'].replace('tmpfiles.org/', 'tmpfiles.org/dl/')
+    if proc.returncode == 0:
+        video_link = f"https://github.com/{repo_name}/releases/download/{tag_name}/final_video.mp4" [cite: 39]
+        print(f"✅ Success! Video uploaded to GitHub: {video_link}") [cite: 40]
         
-        # Yahan dynamic variables use ho rahe hain jo n8n se aaye hain
-        final_msg = f"READY_TO_UPLOAD|{video_link}|{title}|{thumbnail_prompt}|{description}"
+        # Replace piping characters for safe Telegram transmission 
+        final_msg = f"READY_TO_UPLOAD|{video_link}|{title.replace('|', '')}|{thumbnail_prompt.replace('|', '')}|{description.replace('|', '')}"
         
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": final_msg})
-        print(f"✅ Upload Success & Telegram Alert Sent: {video_link}")
+        print("✅ Telegram Alert Sent!")
     else:
-        raise Exception(f"Upload API Error {resp.status_code}: {resp.text}")
+        err_msg = proc.stderr.strip()
+        raise Exception(f"GitHub Release Error: {err_msg}")
 
 except Exception as e:
     error_msg = f"🚨 *PIPELINE FAILED!*\n*Error:* `{str(e)[:100]}`"
