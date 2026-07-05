@@ -264,19 +264,19 @@ print("\n🚀 Uploading Video directly to GitHub Releases...")
 run_id = os.environ.get('GITHUB_RUN_ID', str(int(time.time())))
 tag_name = f"vid-{run_id}"
 
-# Note: Aap ise apne repository name se replace kar sakte hain [cite: 37]
+# Note: Aap ise apne repository name se replace kar sakte hain
 repo_name = os.environ.get('GITHUB_REPOSITORY', "amu8085-lab/my-project1") 
 video_link = None
 
 try:
-    cmd = ['gh', 'release', 'create', tag_name, 'final_video.mp4', '--repo', repo_name, '--notes', 'Automated Video Render'] [cite: 38]
+    cmd = ['gh', 'release', 'create', tag_name, 'final_video.mp4', '--repo', repo_name, '--notes', 'Automated Video Render']
     proc = subprocess.run(cmd, capture_output=True, text=True)
     
     if proc.returncode == 0:
-        video_link = f"https://github.com/{repo_name}/releases/download/{tag_name}/final_video.mp4" [cite: 39]
-        print(f"✅ Success! Video uploaded to GitHub: {video_link}") [cite: 40]
+        video_link = f"https://github.com/{repo_name}/releases/download/{tag_name}/final_video.mp4"
+        print(f"✅ Success! Video uploaded to GitHub: {video_link}")
         
-        # Replace piping characters for safe Telegram transmission 
+        # Replace piping characters for safe Telegram transmission
         final_msg = f"READY_TO_UPLOAD|{video_link}|{title.replace('|', '')}|{thumbnail_prompt.replace('|', '')}|{description.replace('|', '')}"
         
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": final_msg})
