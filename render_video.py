@@ -257,7 +257,7 @@ final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_co
 # ==========================================
 # UPLOAD SYSTEM & TELEGRAM BRIDGE (UPDATED)
 # ==========================================
-BOT_TOKEN = "8879785819:AAFy8nTXBpl696L5YQdDnUmOZgZh5VwsYTs" # AIToolkit Hub Bot Token
+BOT_TOKEN = "8605818135:AAFtJXs2CL-TB7FxYehVb73TCHPKsYrTp78" # AIToolkit Hub Bot Token
 
 print("\n🚀 Uploading Video directly to GitHub Releases...")
 
