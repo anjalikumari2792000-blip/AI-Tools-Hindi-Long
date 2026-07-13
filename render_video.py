@@ -1,6 +1,6 @@
 import os, sys, requests, json, subprocess, socket, gc, math, random, time
 import urllib3.util.connection as urllib3_cn
-from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, ColorClip, afx
+from moviepy.editor import VideoFileClip, AudioFileClip, CompositeAudioClip, CompositeVideoClip, TextClip, ColorClip, afx, concatenate_audioclips
 
 # Force IPv4 to bypass strict server blocks
 def allowed_gai_family():
@@ -51,11 +51,11 @@ for i, scene in enumerate(scenes_data):
         f.write(text_line)
         
     try:
-        # 1. Native Speedup: MoviePy ki jagah Edge-TTS mein rate badha diya
-        subprocess.run([sys.executable, '-m', 'edge_tts', '--voice', 'hi-IN-SwaraNeural', '--rate=+10%', '-f', temp_txt_path, '--write-media', raw_audio], check=True)
+        # 1. Native Speedup: Edge-TTS CLI direct use (more stable in Actions)
+        subprocess.run(['edge-tts', '--voice', 'hi-IN-SwaraNeural', '--rate=+10%', '-f', temp_txt_path, '--write-media', raw_audio], check=True)
         
-        # 2. Perfect Trim: FFmpeg se exact 0.2s hataya aur WAV mein convert kiya
-        subprocess.run(['ffmpeg', '-y', '-i', raw_audio, '-ss', '0.2', '-c:a', 'pcm_s16le', trimmed_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        # 2. Perfect Trim: FFmpeg se exact 0.2s hataya aur WAV mein convert kiya (Fixed sample rate mapping)
+        subprocess.run(['ffmpeg', '-y', '-i', raw_audio, '-ss', '0.2', '-c:a', 'pcm_s16le', '-ar', '44100', trimmed_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         
         # 3. Get exact duration
         clip_audio = AudioFileClip(trimmed_audio)
@@ -146,7 +146,7 @@ for i, scene in enumerate(scenes_data):
                 bg_color = 'transparent' if is_danger else (random.choice(['#FFD400', '#39FF14']) if is_highlight else 'transparent')
                 base_size = 155 if is_danger else (140 if is_highlight else 90)
 
-                # 🚀 SMART DISPLAY REPLACEMENT ENGINE (AIToolkitHub's pure text logic applied to single word) 🚀
+                # 🚀 SMART DISPLAY REPLACEMENT ENGINE 🚀
                 display_word = word
                 replacements = {
                     "sey": "se", "key": "ke", "ney": "ne", "dey": "de", "kaisey": "kaise", "aisey": "aise",
@@ -208,15 +208,10 @@ with open("vid_concat.txt", "w") as f:
 
 subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'vid_concat.txt', '-c', 'copy', 'merged_video.mp4'])
 
-print("Merging Audio scenes safely...")
-with open("aud_concat.txt", "w") as f:
-    for file in rendered_audios:
-        f.write(f"file '{file}'\n")
-
-subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'aud_concat.txt', '-c', 'pcm_s16le', 'merged_audio.wav'])
-
+print("Merging Audio scenes safely via MoviePy (Fixes Silence Bug)...")
+audio_clip_objects = [AudioFileClip(aud) for aud in rendered_audios]
+final_audio = concatenate_audioclips(audio_clip_objects)
 final_video = VideoFileClip("merged_video.mp4")
-final_audio = AudioFileClip("merged_audio.wav")
 
 master_audio_clips = [final_audio]
 current_time = 0.0
@@ -234,7 +229,6 @@ progress_bar = progress_bar.set_duration(final_video.duration)
 
 # 🔥 AIToolKit Hub Watermark Implementation 🔥
 watermark = TextClip("AIToolKit Hub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3)
-# Opacity 0.5 (semi-transparent) and positioned perfectly in the bottom-right corner
 watermark = watermark.set_opacity(0.5).set_position((0.75, 0.88), relative=True).set_duration(final_video.duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
@@ -251,7 +245,6 @@ final_combined_audio = CompositeAudioClip(master_audio_clips)
 final_video = final_video.set_audio(final_combined_audio)
 
 print("Rendering Final COMPRESSED LONG Video...")
-# Bitrate fix: 3000k se 1200k kiya gaya hai to bypass tmpfiles.org 413 Payload Error
 final_video.write_videofile("final_video.mp4", fps=24, codec="libx264", audio_codec="aac", threads=2, bitrate="2000k", preset="ultrafast")
 
 # ==========================================
@@ -263,8 +256,6 @@ print("\n🚀 Uploading Video directly to GitHub Releases...")
 
 run_id = os.environ.get('GITHUB_RUN_ID', str(int(time.time())))
 tag_name = f"vid-{run_id}"
-
-# Note: Aap ise apne repository name se replace kar sakte hain
 repo_name = os.environ.get('GITHUB_REPOSITORY', "amu8085-lab/my-project1") 
 video_link = None
 
