@@ -209,18 +209,25 @@ with open("vid_concat.txt", "w") as f:
 subprocess.run(['ffmpeg', '-y', '-f', 'concat', '-safe', '0', '-i', 'vid_concat.txt', '-c', 'copy', 'merged_video.mp4'])
 
 print("Merging Audio scenes safely via MoviePy (Fixes Silence Bug)...")
-audio_clip_objects = [AudioFileClip(aud) for aud in rendered_audios]
-final_audio = concatenate_audioclips(audio_clip_objects)
 final_video = VideoFileClip("merged_video.mp4")
 
-master_audio_clips = [final_audio]
+master_audio_clips = []
 current_time = 0.0
 
-# Add SFX strictly aligned with exact scene timings
-for dur in scene_durations:
+# 🚀 SYNC FIX: Add TTS and SFX strictly aligned with exact video chunk timings 🚀
+for i, aud in enumerate(rendered_audios):
+    tts_clip = AudioFileClip(aud).set_start(current_time)
+    master_audio_clips.append(tts_clip)
+    
     if whoosh_sfx:
         master_audio_clips.append(whoosh_sfx.set_start(current_time))
-    current_time += dur
+        
+    # Calculate exact duration of the rendered video chunk to prevent audio drifting
+    v_clip = VideoFileClip(rendered_videos[i])
+    actual_chunk_duration = v_clip.duration
+    v_clip.close()
+    
+    current_time += actual_chunk_duration
 
 # PROGRESS BAR
 progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
