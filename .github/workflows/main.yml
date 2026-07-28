@@ -1,10 +1,10 @@
-name: Auto Render Hindi Facts Video
+name: Auto Render AI Tools Video
 
 on:
   repository_dispatch:
     types: [render_and_upload]
 
-# 👇 YEH BLOCK ADD KIYA GAYA HAI (Releases create karne ki permission)  👇
+# 👇 YEH BLOCK ADD KIYA GAYA HAI (Releases create karne ki permission) 👇
 permissions:
   contents: write
 
@@ -40,6 +40,10 @@ jobs:
           THUMBNAIL_PROMPT: ${{ github.event.client_payload.thumbnail_prompt }}
           TITLE: ${{ github.event.client_payload.title }}
           DESCRIPTION: ${{ github.event.client_payload.description }}
+          
+          # 👇 YAHAN SMART FALLBACK KEYWORDS ADD KIYA GAYA HAI 👇
+          FALLBACK_KEYWORDS: ${{ github.event.client_payload.fallback_keywords }}
+          
           PEXELS_API_KEY: ${{ secrets.PEXELS_API_KEY }} 
           # 👇 YEH LINE ADD KI GAYI HAI 👇
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
