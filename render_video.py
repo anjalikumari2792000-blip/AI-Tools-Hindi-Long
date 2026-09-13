@@ -46,34 +46,34 @@ scene_durations = []
 for i, scene in enumerate(scenes_data):
     keyword = scene.get('keyword', 'finance')
     text_line = scene.get('text', '').strip()
-    
+
     if not text_line: continue
-    
+
     temp_txt_path = f"temp_scene_{i}.txt"
     raw_audio = f"raw_audio_{i}.mp3"
     trimmed_audio = f"trimmed_audio_{i}.wav" # WAV ensures perfect frame timing
-    
+
     with open(temp_txt_path, "w", encoding="utf-8") as f:
         f.write(text_line)
-        
+
     try:
         # 1. Native Speedup: Edge-TTS CLI direct use (more stable in Actions)
         subprocess.run(['edge-tts', '--voice', 'hi-IN-SwaraNeural', '--rate=+10%', '-f', temp_txt_path, '--write-media', raw_audio], check=True)
-        
+
         # 2. Perfect Trim: FFmpeg se exact 0.2s hataya aur WAV mein convert kiya (Fixed sample rate mapping)
         subprocess.run(['ffmpeg', '-y', '-i', raw_audio, '-ss', '0.2', '-c:a', 'pcm_s16le', '-ar', '44100', trimmed_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        
+
         # 3. Get exact duration
         clip_audio = AudioFileClip(trimmed_audio)
         scene_duration = clip_audio.duration
         clip_audio.close()
-        
+
         scene_durations.append(scene_duration)
-        
+
     except Exception as e:
         print(f"Audio failed for scene {i}: {e}")
         continue
-        
+
     # 🚀 OPTIMIZED TOPIC-BASED VIDEO FETCHING 🚀
     try:
         kw_lower = keyword.lower()
@@ -83,7 +83,7 @@ for i, scene in enumerate(scenes_data):
             search_query = f"{keyword} finance wealth"
         else:
             search_query = keyword
-            
+
         queries_to_try = [search_query] + FALLBACK_KEYWORDS
         is_valid_video = False
         vid_path = f"vid_{i}.mp4"
@@ -96,19 +96,19 @@ for i, scene in enumerate(scenes_data):
                     # Jab attempts badhein toh safe page=1 rakho taaki khali result na aaye
                     random_page = random.randint(1, 2) if attempt == 0 else 1
                     url = f"https://api.pexels.com/videos/search?query={urllib.parse.quote(q)}&per_page=15&page={random_page}&orientation=landscape"
-                    
+
                     response = requests.get(url, headers=headers, timeout=15)
-                    
+
                     # [IMPROVED]: Added Rate Limit (429) Handling
                     if response.status_code == 429:
                         time.sleep(2)
                         continue
-                        
+
                     if response.status_code == 200:
                         res = response.json()
                         if 'videos' in res and len(res['videos']) > 0:
                             current_url = res['videos'][0]['video_files'][0]['link']
-                            
+
                             # Download with 200KB Size Check
                             req = requests.get(current_url, timeout=30)
                             if req.status_code == 200:
@@ -128,32 +128,34 @@ for i, scene in enumerate(scenes_data):
             video_url = res['videos'][0]['video_files'][0]['link']
             with open(vid_path, "wb") as f:
                 f.write(requests.get(video_url, timeout=30).content)
-        
+
         clip = VideoFileClip(vid_path).subclip(0, min(scene_duration, VideoFileClip(vid_path).duration))
         if clip.duration < scene_duration:
             clip = afx.vfx.loop(clip, duration=scene_duration)
-            
+
         clip = clip.resize(height=TARGET_H)
         if clip.w < TARGET_W: clip = clip.resize(width=TARGET_W)
         clip = clip.crop(x_center=clip.w/2, y_center=clip.h/2, width=TARGET_W, height=TARGET_H)
-        
+
         # Zoom Effect & Overlay
         zoomed_clip = clip.resize(lambda t: 1.0 + 0.04 * (t / scene_duration)).set_position(('center', 'center'))
         dark_overlay = ColorClip(size=(TARGET_W, TARGET_H), color=(0,0,0)).set_opacity(0.40).set_duration(scene_duration).set_position(('center', 'center'))
-        
-        # 🔥 ANDROID TRICKS TEXT ENGINE (Word by Word Sync) 🔥
+
+        # 🔥 TEXT ENGINE (Right Alignment Fix) 🔥
         def advanced_punch_anim(t):
             if t < 0.06: return 1.6 - 10.0 * t  
             elif t < 0.15: return 1.0 + 1.2 * (t - 0.06) 
             return 1.0
 
+        # 🔥 FIXED POSITION: Right Side Alignment (60% from Left Edge) 🔥
         def get_kinetic_pos(base_y, is_shaking, word_idx):
             def pos(t):
                 idle_y = 7 * math.sin(t * 8 + word_idx)
                 idle_x = 4 * math.cos(t * 6 + word_idx)
+                right_x_pos = TARGET_W * 0.60  # Text set to right side
                 if is_shaking and t > 0.06:
-                    return (TARGET_W/2 + 5 * math.sin(t * 75) + idle_x, base_y + 5 * math.cos(t * 85) + idle_y)
-                return (TARGET_W/2 + idle_x, base_y + idle_y)
+                    return (right_x_pos + 5 * math.sin(t * 75) + idle_x, base_y + 5 * math.cos(t * 85) + idle_y)
+                return (right_x_pos + idle_x, base_y + idle_y)
             return pos
 
         words = text_line.split()
@@ -167,7 +169,7 @@ for i, scene in enumerate(scenes_data):
                 if w.endswith(','): wt += 4 
                 elif w[-1] in '.?!।': wt += 8 
                 word_weights.append(wt)
-            
+
             total_weight = sum(word_weights) if sum(word_weights) > 0 else 1
             current_time_pos = 0.0
 
@@ -175,9 +177,9 @@ for i, scene in enumerate(scenes_data):
                 word_lower = word.lower()
                 is_danger = any(kw in word_lower for kw in ['secret', 'trick', 'hidden', 'scam', 'khatarnaak', 'danger', 'alert', 'mat', 'paisa', 'paise', 'income', 'profit', 'earn'])
                 is_highlight = not is_danger and len(word) > 5
-                
+
                 duration_per_word = (word_weights[w_i] / total_weight) * scene_duration
-                
+
                 if is_danger or is_highlight:
                     danger_timestamps.append((current_time_pos, current_time_pos + duration_per_word))
 
@@ -199,41 +201,44 @@ for i, scene in enumerate(scenes_data):
                 if clean_w in replacements:
                     display_word = display_word.replace(clean_w, replacements[clean_w]).replace(clean_w.upper(), replacements[clean_w].upper()).replace(clean_w.capitalize(), replacements[clean_w].capitalize())
 
+                # 🔥 PADDING APPLIED & SIZE REMOVED: Auto-width generation to prevent clipping 🔥
+                display_word = f"  {display_word}  "
+
                 try:
                     text_y_pos = TARGET_H * 0.75 
                     position_filter = get_kinetic_pos(text_y_pos, is_danger, w_i)
 
                     if bg_color == 'transparent':
-                        shadow_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(get_kinetic_pos(text_y_pos + 15, is_danger, w_i)).set_duration(duration_per_word).set_start(current_time_pos)
-                        bg_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=16, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
-                        inner_border_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='white', stroke_width=4, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
-                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE, method='caption', size=(1500, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        shadow_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE).resize(advanced_punch_anim).set_position(get_kinetic_pos(text_y_pos + 15, is_danger, w_i)).set_duration(duration_per_word).set_start(current_time_pos)
+                        bg_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=16).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        inner_border_txt = TextClip(display_word, fontsize=base_size, color='black', font=HINDI_FONT_FILE, stroke_color='white', stroke_width=4).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, font=HINDI_FONT_FILE).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
                         word_clips.extend([shadow_txt, bg_txt, inner_border_txt, main_txt])
                     else:
-                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE, method='caption', size=(None, None)).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
+                        main_txt = TextClip(display_word, fontsize=base_size, color=current_color, bg_color=bg_color, font=HINDI_FONT_FILE).resize(advanced_punch_anim).set_position(position_filter).set_duration(duration_per_word).set_start(current_time_pos)
                         word_clips.append(main_txt)
                 except: pass
-                
+
                 current_time_pos += duration_per_word
 
         final_scene = CompositeVideoClip([zoomed_clip, dark_overlay] + word_clips, size=(TARGET_W, TARGET_H)).set_duration(scene_duration)
-        
+
         scene_filename = f"scene_rendered_{i}.mp4"
         final_scene.write_videofile(scene_filename, fps=24, codec="libx264", preset="superfast", audio=False, logger=None)
-        
+
         rendered_videos.append(scene_filename)
         rendered_audios.append(trimmed_audio)
-        
+
         final_scene.close()
         clip.close()
         del final_scene, clip, zoomed_clip, word_clips
         gc.collect()
-        
+
         print(f"Scene {i+1} Ready: {keyword}")
-        
+
         if os.path.exists(temp_txt_path): os.remove(temp_txt_path)
         if os.path.exists(raw_audio): os.remove(raw_audio)
-        
+
     except Exception as e:
         print(f"Error on scene {i} video processing: {e}")
 
@@ -257,15 +262,15 @@ current_time = 0.0
 for i, aud in enumerate(rendered_audios):
     tts_clip = AudioFileClip(aud).set_start(current_time)
     master_audio_clips.append(tts_clip)
-    
+
     if whoosh_sfx:
         master_audio_clips.append(whoosh_sfx.set_start(current_time))
-        
+
     # Calculate exact duration of the rendered video chunk to prevent audio drifting
     v_clip = VideoFileClip(rendered_videos[i])
     actual_chunk_duration = v_clip.duration
     v_clip.close()
-    
+
     current_time += actual_chunk_duration
 
 # PROGRESS BAR
@@ -273,9 +278,9 @@ progress_bar = ColorClip(size=(TARGET_W, 15), color=(255, 0, 0))
 progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (t / max(final_video.duration, 1))), 'bottom'))
 progress_bar = progress_bar.set_duration(final_video.duration)
 
-# 🔥 AIToolKit Hub Watermark Implementation 🔥
+# 🔥 FIXED WATERMARK: Positioned perfectly in the top-right corner 🔥
 watermark = TextClip("AIToolKit Hub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3)
-watermark = watermark.set_opacity(0.5).set_position((0.75, 0.88), relative=True).set_duration(final_video.duration)
+watermark = watermark.set_opacity(0.5).set_position(('right', 50)).set_duration(final_video.duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
 
@@ -310,14 +315,14 @@ video_link = None
 try:
     cmd = ['gh', 'release', 'create', tag_name, 'final_video.mp4', '--repo', repo_name, '--notes', 'Automated Video Render']
     proc = subprocess.run(cmd, capture_output=True, text=True)
-    
+
     if proc.returncode == 0:
         video_link = f"https://github.com/{repo_name}/releases/download/{tag_name}/final_video.mp4"
         print(f"✅ Success! Video uploaded to GitHub: {video_link}")
-        
+
         # Replace piping characters for safe Telegram transmission
         final_msg = f"READY_TO_UPLOAD|{video_link}|{title.replace('|', '')}|{thumbnail_prompt.replace('|', '')}|{description.replace('|', '')}"
-        
+
         requests.post(f"https://api.telegram.org/bot{BOT_TOKEN}/sendMessage", json={"chat_id": chat_id, "text": final_msg})
         print("✅ Telegram Alert Sent!")
     else:
