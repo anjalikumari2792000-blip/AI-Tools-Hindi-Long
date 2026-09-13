@@ -279,7 +279,7 @@ progress_bar = progress_bar.set_position(lambda t: (-TARGET_W + int(TARGET_W * (
 progress_bar = progress_bar.set_duration(final_video.duration)
 
 # 🔥 FIXED WATERMARK: Positioned perfectly in the top-right corner 🔥
-watermark = TextClip("AIToolKit Hub", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3)
+watermark = TextClip("AIToolKit Hub®", fontsize=55, color='white', font=HINDI_FONT_FILE, stroke_color='black', stroke_width=3)
 watermark = watermark.set_opacity(0.5).set_position(('right', 50)).set_duration(final_video.duration)
 
 final_video = CompositeVideoClip([final_video, progress_bar, watermark])
